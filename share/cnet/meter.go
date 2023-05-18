@@ -10,14 +10,14 @@ import (
 	"github.com/jpillora/sizestr"
 )
 
-//NewMeter to measure readers/writers
+// NewMeter to measure readers/writers
 func NewMeter(l *cio.Logger) *Meter {
 	return &Meter{l: l}
 }
 
-//Meter can be inserted in the path or
-//of a reader or writer to measure the
-//throughput
+// Meter can be inserted in the path or
+// of a reader or writer to measure the
+// throughput
 type Meter struct {
 	//meter state
 	sent, recv int64
@@ -62,9 +62,9 @@ func (m *Meter) goprint() {
 	atomic.StoreUint32(&m.printing, 0)
 }
 
-//TeeReader inserts Meter into the read path
-//if the linked logger is in debug mode,
-//otherwise this is a no-op
+// TeeReader inserts Meter into the read path
+// if the linked logger is in debug mode,
+// otherwise this is a no-op
 func (m *Meter) TeeReader(r io.Reader) io.Reader {
 	if m.l.IsDebug() {
 		return &meterReader{m, r}
@@ -84,9 +84,9 @@ func (m *meterReader) Read(p []byte) (n int, err error) {
 	return
 }
 
-//TeeWriter inserts Meter into the write path
-//if the linked logger is in debug mode,
-//otherwise this is a no-op
+// TeeWriter inserts Meter into the write path
+// if the linked logger is in debug mode,
+// otherwise this is a no-op
 func (m *Meter) TeeWriter(w io.Writer) io.Writer {
 	if m.l.IsDebug() {
 		return &meterWriter{m, w}
@@ -106,9 +106,9 @@ func (m *meterWriter) Write(p []byte) (n int, err error) {
 	return
 }
 
-//MeterConn inserts Meter into the connection path
-//if the linked logger is in debug mode,
-//otherwise this is a no-op
+// MeterConn inserts Meter into the connection path
+// if the linked logger is in debug mode,
+// otherwise this is a no-op
 func MeterConn(l *cio.Logger, conn net.Conn) net.Conn {
 	m := NewMeter(l)
 	return &meterConn{
@@ -132,9 +132,9 @@ func (m *meterConn) Write(p []byte) (n int, err error) {
 	return m.mwrite.Write(p)
 }
 
-//MeterRWC inserts Meter into the RWC path
-//if the linked logger is in debug mode,
-//otherwise this is a no-op
+// MeterRWC inserts Meter into the RWC path
+// if the linked logger is in debug mode,
+// otherwise this is a no-op
 func MeterRWC(l *cio.Logger, rwc io.ReadWriteCloser) io.ReadWriteCloser {
 	m := NewMeter(l)
 	return &struct {

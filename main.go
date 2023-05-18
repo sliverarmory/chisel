@@ -1,6 +1,8 @@
+//nolint:gosec
 package main
 
 import (
+	"C"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -11,12 +13,24 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	chclient "github.com/jpillora/chisel/client"
 	chserver "github.com/jpillora/chisel/server"
 	chshare "github.com/jpillora/chisel/share"
 	"github.com/jpillora/chisel/share/cos"
 )
+import (
+	"sync"
+	"syscall"
+)
+
+type task struct {
+	taskType string
+	command  string
+	server   *chserver.Server
+	client   *chclient.Client
+}
 
 var help = `
   Usage: chisel [command] [--help]
@@ -32,6 +46,114 @@ var help = `
 
 `
 
+var output string = ""
+var g_callback uintptr
+var tasks map[uint32]*task
+var n_tasks uint32 = 0
+var m sync.Mutex
+
+func sendOutput() {
+
+	b := []byte(output)
+	dataPtr := uintptr(unsafe.Pointer(&b[0]))
+	dataSize := uintptr(uint32(len(b)))
+
+	_, _, errNo := syscall.SyscallN(g_callback, dataPtr, dataSize)
+	if errNo != 0 {
+		println("Got error: %s", errNo.Error())
+	}
+	return
+}
+
+//export entrypoint
+func entrypoint(data uintptr, dataLen uintptr, callback uintptr) {
+	m.Lock()
+	defer m.Unlock()
+	g_callback = callback
+	// var (
+	// 	argumentsPtr  uintptr
+	// 	argumentsSize uintptr
+	// )
+	output = ""
+	outDataSize := int(dataLen)
+	outBytes := unsafe.Slice((*byte)(unsafe.Pointer(data)), outDataSize)
+
+	argstring := string(outBytes[:])
+
+	output += fmt.Sprintf("received argstring: %s\n", argstring)
+	//newstring := fmt.Sprintf("I received:  %s", argstring)
+	// b := []byte(newstring)
+	// argumentsPtr = uintptr(unsafe.Pointer(&b[0]))
+	// argumentsSize = uintptr(uint32(len(b)))
+
+	// _, _, errNo := syscall.SyscallN(callback, argumentsPtr, argumentsSize)
+	// if errNo != 0 {
+	// 	println("Got error: %s", errNo.Error())
+	// }
+
+	os.Args[0] = "chisel.exe"
+	os.Args = append(os.Args, strings.Fields(argstring)...)
+
+	output += fmt.Sprintf("os.Args = %v\n", os.Args)
+
+	version := flag.Bool("version", false, "")
+	v := flag.Bool("v", false, "")
+	flag.Bool("help", false, "")
+	flag.Bool("h", false, "")
+	flag.Usage = func() {}
+	flag.Parse()
+
+	if *version || *v {
+		fmt.Println(chshare.BuildVersion)
+		return
+	}
+
+	args := flag.Args()
+
+	subcmd := ""
+	if len(args) > 0 {
+		subcmd = args[0]
+		args = args[1:]
+	}
+
+	switch subcmd {
+	case "stop":
+		break
+	case "list":
+		output = "###Running Tasks###\n"
+
+		for k, v := range tasks {
+			row := fmt.Sprintf("taskID=%d ,taskType=%s, command=%s", k, v.taskType, v.command)
+			output += row
+		}
+		break
+	case "server":
+		s := server(args)
+		tasks[n_tasks] = &task{
+			taskType: "client",
+			command:  argstring,
+			server:   s,
+		}
+		n_tasks++
+		break
+	case "client":
+		client(args)
+		// tasks[n_tasks] = &task{
+		// 	taskType: "server",
+		// 	command:  argstring,
+		// 	client:   c,
+		// }
+		// n_tasks++
+		break
+	default:
+		output = fmt.Sprintf("argstring= %s\n", argstring)
+		output += help
+		break
+	}
+	sendOutput()
+	return
+}
+
 func main() {
 
 	version := flag.Bool("version", false, "")
@@ -43,7 +165,7 @@ func main() {
 
 	if *version || *v {
 		fmt.Println(chshare.BuildVersion)
-		os.Exit(0)
+		return
 	}
 
 	args := flag.Args()
@@ -61,7 +183,7 @@ func main() {
 		client(args)
 	default:
 		fmt.Print(help)
-		os.Exit(0)
+		return
 	}
 }
 
@@ -164,7 +286,7 @@ var serverHelp = `
     instead of the system roots. This is commonly used to implement mutual-TLS. 
 ` + commonHelp
 
-func server(args []string) {
+func server(args []string) *chserver.Server {
 
 	flags := flag.NewFlagSet("server", flag.ContinueOnError)
 
@@ -190,7 +312,7 @@ func server(args []string) {
 
 	flags.Usage = func() {
 		fmt.Print(serverHelp)
-		os.Exit(0)
+		return
 	}
 	flags.Parse(args)
 
@@ -225,9 +347,10 @@ func server(args []string) {
 	if err := s.StartContext(ctx, *host, *port); err != nil {
 		log.Fatal(err)
 	}
-	if err := s.Wait(); err != nil {
-		log.Fatal(err)
-	}
+	// if err := s.Wait(); err != nil {
+	// 	log.Fatal(err)
+	// }
+	return s
 }
 
 type multiFlag struct {
@@ -389,7 +512,7 @@ var clientHelp = `
     enabled (mutual-TLS).
 ` + commonHelp
 
-func client(args []string) {
+func client(args []string) *chclient.Client {
 	flags := flag.NewFlagSet("client", flag.ContinueOnError)
 	config := chclient.Config{Headers: http.Header{}}
 	flags.StringVar(&config.Fingerprint, "fingerprint", "", "")
@@ -409,7 +532,7 @@ func client(args []string) {
 	verbose := flags.Bool("v", false, "")
 	flags.Usage = func() {
 		fmt.Print(clientHelp)
-		os.Exit(0)
+		return
 	}
 	flags.Parse(args)
 	//pull out options, put back remaining args
@@ -447,7 +570,8 @@ func client(args []string) {
 	if err := c.Start(ctx); err != nil {
 		log.Fatal(err)
 	}
-	if err := c.Wait(); err != nil {
-		log.Fatal(err)
-	}
+	// if err := c.Wait(); err != nil {
+	// 	log.Fatal(err)
+	// }
+	return c
 }

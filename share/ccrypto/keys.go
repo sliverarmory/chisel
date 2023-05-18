@@ -13,7 +13,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-//GenerateKey for use as an SSH private key
+// GenerateKey for use as an SSH private key
 func GenerateKey(seed string) ([]byte, error) {
 	r := rand.Reader
 	if seed != "" {
@@ -30,7 +30,7 @@ func GenerateKey(seed string) ([]byte, error) {
 	return pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: b}), nil
 }
 
-//FingerprintKey calculates the SHA256 hash of an SSH public key
+// FingerprintKey calculates the SHA256 hash of an SSH public key
 func FingerprintKey(k ssh.PublicKey) string {
 	bytes := sha256.Sum256(k.Marshal())
 	return base64.StdEncoding.EncodeToString(bytes[:])

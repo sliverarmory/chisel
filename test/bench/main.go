@@ -55,13 +55,13 @@ func run() {
 	}
 }
 
-//test
+// test
 func test() {
 	testTunnel("2001", 500)
 	testTunnel("2001", 50000)
 }
 
-//benchmark
+// benchmark
 func bench() {
 	benchSizes("3000")
 	benchSizes("2001")
@@ -136,7 +136,7 @@ func fatalf(f string, args ...interface{}) {
 	panic(fmt.Sprintf(f, args...))
 }
 
-//global setup
+// global setup
 func main() {
 
 	fs := makeFileServer()

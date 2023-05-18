@@ -50,7 +50,7 @@ var (
 	NewTCPProxy      = tunnel.NewProxy
 )
 
-//EncodeConfig old version
+// EncodeConfig old version
 func EncodeConfig(c *settings.Config) ([]byte, error) {
 	return settings.EncodeConfig(*c), nil
 }
