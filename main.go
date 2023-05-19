@@ -21,6 +21,7 @@ import (
 	"github.com/jpillora/chisel/share/cos"
 )
 import (
+	"context"
 	"sync"
 	"syscall"
 )
@@ -38,8 +39,10 @@ var help = `
   Version: ` + chshare.BuildVersion + ` (` + runtime.Version() + `)
 
   Commands:
-    server - runs chisel in server mode
-    client - runs chisel in client mode
+    list  - list running tasks
+    stop <taskId> - stop task identified by taskId 
+    server - runs a chisel task in server mode
+    client - runs a chisel task in client mode
 
   Read more:
     https://github.com/jpillora/chisel
@@ -127,10 +130,31 @@ func entrypoint(data uintptr, dataLen uintptr, callback uintptr) {
 
 	switch subcmd {
 	case "stop":
+		if len(args) < 1 {
+			output = help
+		} else {
+			i64, err := strconv.ParseInt(args[0], 10, 64)
+			if err != nil {
+				output = fmt.Sprintf("Error parsing taskId.\nFailed with error: %s\n\n", err.Error())
+			} else {
+				taskId := uint32(i64)
+				t := tasks[taskId]
+				if t.taskType == "client" {
+					t.client.Close()
+				} else if t.taskType == "server" {
+					t.server.Close()
+				}
+				delete(tasks, taskId)
+				output = "  ###Running Tasks###\n\n"
+				for k, v := range tasks {
+					row := fmt.Sprintf("\ttaskID=%d taskType=%s command=%s\n\n", k, v.taskType, v.command)
+					output += row
+				}
+			}
+		}
 		break
 	case "list":
-		output = "###Running Tasks###\n"
-
+		output = "  ###Running Tasks###\n\n"
 		for k, v := range tasks {
 			row := fmt.Sprintf("\ttaskID=%d taskType=%s command=%s\n\n", k, v.taskType, v.command)
 			output += row
@@ -574,8 +598,7 @@ func client(args []string) *chclient.Client {
 	if *pid {
 		generatePidFile()
 	}
-	go cos.GoStats()
-	ctx := cos.InterruptContext()
+	ctx := context.Background()
 	if err := c.Start(ctx); err != nil {
 		log.Fatal(err)
 	}
