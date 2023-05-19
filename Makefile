@@ -27,7 +27,7 @@ windows:
 	env CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -n -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/chisel-windows_amd64 .
 
 windowsdll:
-	env CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc-win32 go build -buildmode=c-shared -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/chisel.dll .
+	env CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc-win32 go build -buildmode=c-shared -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ~/.sliver-client/extensions/chisel/chisel.dll .
 darwin:
 	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/chisel-darwin_amd64 .
 

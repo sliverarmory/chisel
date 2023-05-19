@@ -48,9 +48,10 @@ var help = `
 
 var output string = ""
 var g_callback uintptr
-var tasks map[uint32]*task
 var n_tasks uint32 = 0
 var m sync.Mutex
+
+var tasks = map[uint32]*task{}
 
 func sendOutput() {
 
@@ -76,8 +77,13 @@ func entrypoint(data uintptr, dataLen uintptr, callback uintptr) {
 	// )
 	output = ""
 	outDataSize := int(dataLen)
+	if outDataSize == 0 {
+		output = "No arguments provided"
+		output += help
+		sendOutput()
+		return
+	}
 	outBytes := unsafe.Slice((*byte)(unsafe.Pointer(data)), outDataSize)
-
 	argstring := string(outBytes[:])
 
 	output += fmt.Sprintf("received argstring: %s\n", argstring)
@@ -91,10 +97,13 @@ func entrypoint(data uintptr, dataLen uintptr, callback uintptr) {
 	// 	println("Got error: %s", errNo.Error())
 	// }
 
-	os.Args[0] = "chisel.exe"
+	os.Args = nil
+	os.Args = append(os.Args, "chisel.exe")
 	os.Args = append(os.Args, strings.Fields(argstring)...)
 
 	output += fmt.Sprintf("os.Args = %v\n", os.Args)
+
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	version := flag.Bool("version", false, "")
 	v := flag.Bool("v", false, "")
@@ -123,27 +132,27 @@ func entrypoint(data uintptr, dataLen uintptr, callback uintptr) {
 		output = "###Running Tasks###\n"
 
 		for k, v := range tasks {
-			row := fmt.Sprintf("taskID=%d ,taskType=%s, command=%s", k, v.taskType, v.command)
+			row := fmt.Sprintf("\ttaskID=%d taskType=%s command=%s\n\n", k, v.taskType, v.command)
 			output += row
 		}
 		break
 	case "server":
 		s := server(args)
 		tasks[n_tasks] = &task{
-			taskType: "client",
+			taskType: "server",
 			command:  argstring,
 			server:   s,
 		}
 		n_tasks++
 		break
 	case "client":
-		client(args)
-		// tasks[n_tasks] = &task{
-		// 	taskType: "server",
-		// 	command:  argstring,
-		// 	client:   c,
-		// }
-		// n_tasks++
+		c := client(args)
+		tasks[n_tasks] = &task{
+			taskType: "client",
+			command:  argstring,
+			client:   c,
+		}
+		n_tasks++
 		break
 	default:
 		output = fmt.Sprintf("argstring= %s\n", argstring)
