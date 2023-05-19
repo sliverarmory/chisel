@@ -169,6 +169,7 @@ func entrypoint(data uintptr, dataLen uintptr, callback uintptr) {
 		}
 		n_tasks++
 		break
+		output += "Task started successfully.\n"
 	case "client":
 		c := client(args)
 		tasks[n_tasks] = &task{
@@ -177,6 +178,7 @@ func entrypoint(data uintptr, dataLen uintptr, callback uintptr) {
 			client:   c,
 		}
 		n_tasks++
+		output += "Task started successfully.\n"
 		break
 	default:
 		output = fmt.Sprintf("argstring= %s\n", argstring)
