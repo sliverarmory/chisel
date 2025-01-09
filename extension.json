@@ -17,6 +17,16 @@
       "os": "windows",
       "arch": "386",
       "path": "chisel.x86.dll"
+    },
+    {
+      "os": "linux",
+      "arch": "amd64",
+      "path": "chisel.x64.so"
+    },
+    {
+      "os": "linux",
+      "arch": "386",
+      "path": "chisel.x86.so"
     }
   ]
 }
