@@ -1,9 +1,8 @@
 VERSION=$(shell git describe --abbrev=0 --tags)
-BUILD=$(shell git rev-parse HEAD)
 DIRBASE=./build
 DIR=${DIRBASE}/${VERSION}/${BUILD}/bin
 
-LDFLAGS=-ldflags "-s -w ${XBUILD} -buildid=${BUILD} -X github.com/jpillora/chisel/share.BuildVersion=${VERSION}"
+LDFLAGS=-ldflags "-s -w ${XBUILD} "
 
 GOFILES=`go list ./...`
 GOFILESNOTEST=`go list ./... | grep -v test`
@@ -27,9 +26,13 @@ windows:
 	env CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -n -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/chisel-windows_amd64 .
 
 windowsdll_64:
-	env CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc-win32 go build -buildmode=c-shared -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ~/.sliver-client/extensions/chisel/chisel.x64.dll .
+	env CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc-win32 go build -buildmode=c-shared -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o chisel.x64.dll .
 windowsdll_32:
-	env CGO_ENABLED=1 GOOS=windows GOARCH=386 CC=i686-w64-mingw32-gcc-win32 go build -buildmode=c-shared -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ~/.sliver-client/extensions/chisel/chisel.32.dll .
+	env CGO_ENABLED=1 GOOS=windows GOARCH=386 CC=i686-w64-mingw32-gcc-win32 go build -buildmode=c-shared -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o chisel.x86.dll .
+linuxso_64:
+	env CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -buildmode=c-shared -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o chisel.x64.so .
+linuxso_32:
+	env CGO_ENABLED=1 GOOS=linux GOARCH=386 go build -buildmode=c-shared -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o chisel.x86.so .
 darwin:
 	env CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath ${LDFLAGS} ${GCFLAGS} ${ASMFLAGS} -o ${DIR}/chisel-darwin_amd64 .
 

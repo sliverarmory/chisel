@@ -23,7 +23,6 @@ import (
 import (
 	"context"
 	"sync"
-	"syscall"
 )
 
 type task struct {
@@ -49,25 +48,10 @@ var help = `
 
 `
 
-var output string = ""
-var g_callback uintptr
 var n_tasks uint32 = 0
 var m sync.Mutex
 
 var tasks = map[uint32]*task{}
-
-func sendOutput() {
-
-	b := []byte(output)
-	dataPtr := uintptr(unsafe.Pointer(&b[0]))
-	dataSize := uintptr(uint32(len(b)))
-
-	_, _, errNo := syscall.SyscallN(g_callback, dataPtr, dataSize)
-	if errNo != 0 {
-		println("Got error: %s", errNo.Error())
-	}
-	return
-}
 
 //export entrypoint
 func entrypoint(data uintptr, dataLen uintptr, callback uintptr) {
